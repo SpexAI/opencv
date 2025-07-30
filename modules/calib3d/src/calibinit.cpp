@@ -2259,6 +2259,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
                 isValid = true;
                 break;  // done, return result
             }
+            CV_LOG_VERBOSE(NULL, "no holes found with attempt=" << i);
         }
         catch (const cv::Exception& e)
         {

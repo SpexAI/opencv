@@ -2873,7 +2873,7 @@ bool restoreFPDenormalsState(const FPDenormalsModeState& state)
     CV_DbgCheck((int)value, value == (value & mask), "invalid SSE FP state");
     const unsigned old_flags = _mm_getcsr();
     unsigned flags = (old_flags & ~mask) | value;
-    CV_LOG_DEBUG(NULL, "core: restore FP mxcsr flags = " << cv::format("0x%08x", flags));
+    CV_LOG_VERBOSE(NULL, 2, "core: restore FP mxcsr flags = " << cv::format("0x%08x", flags));
     _mm_setcsr(flags);
     return true;
 #else
