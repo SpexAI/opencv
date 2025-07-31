@@ -519,9 +519,9 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
   //flann::AutotunedIndexParams flannIndexParams;
   flann::Index flannIndex(Mat(rectifiedPatternPoints).reshape(1), flannIndexParams);
   std::vector<int> foundIndices;
-  auto gray = Scalar::all(200);
   bool notFound = false;
 #ifdef DEBUG_CIRCLES
+  auto gray = Scalar::all(200);
   std::cerr << "DEBUG parsePatternPoints: patternSize " << patternSize << std::endl;
 #endif
 
@@ -547,28 +547,43 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
 #endif
 
       Mat query(1, 2, CV_32F, &idealPt);
-      const int knn = 1;
-      int indicesbuf[knn] = {0};
-      float distsbuf[knn] = {0.f};
+      const int knn = 2;
+      int indicesbuf[knn] = {0, 0};
+      float distsbuf[knn] = {0.f, 0.f};
       Mat indices(1, knn, CV_32S, &indicesbuf);
       Mat dists(1, knn, CV_32F, &distsbuf);
       flannIndex.knnSearch(query, indices, dists, knn, flann::SearchParams());
       int index = indicesbuf[0];
+      int whichKnn = 0;
       bool isFound = distsbuf[0] <= maxRectifiedDistance;
       bool isDuplicate = false;
-      // first check for duplicate indices
+      // first check for duplicate indices. search the best 2 candidates
       if (std::find(foundIndices.begin(), foundIndices.end(), index) == foundIndices.end())
         foundIndices.push_back(index);
       else {
-        isDuplicate = true;
-        isFound = false;
+#ifdef DEBUG_CIRCLES
+        std::cerr << "1st knn [" << index << "] failed, ";
+#endif
+        index = indicesbuf[1];
+        isFound = distsbuf[1] <= maxRectifiedDistance;
+        if (std::find(foundIndices.begin(), foundIndices.end(), index) == foundIndices.end()) {
+#ifdef DEBUG_CIRCLES
+          std::cerr << "2nd knn [" << index << "] better, ";
+#endif
+          whichKnn++;
+          foundIndices.push_back(index);
+        }
+        else {
+          isDuplicate = true;
+          isFound = false;
+        }
       }
       cv::Point2f center = patternPoints.at(index);
 #ifdef DEBUG_CIRCLES
       dbg_centers.push_back(center);
       auto color = isFound ? gray : Scalar(0, 200, 200); // BGR
       drawPoint(center, centersImage, dbg_centers.size(), 2, color, true);
-      std::cerr << (isFound ? "found" : "not found")
+      std::cerr << (isFound ? "found" : "no found")
                 << " center at [" << index << "] "
                 << center << std::endl;
 #endif
@@ -576,14 +591,12 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
       if (isFound)
         centers.push_back(center);
       else {
-#ifdef DEBUG_CIRCLES
         if (isDuplicate)
           std::cerr << "    Duplicate center found at ["
                     << index << "]" << std::endl;
-        else if (distsbuf[0] > maxRectifiedDistance)
-          std::cerr << "    Pattern not detected: rectified distance " << distsbuf[0]
+        else if (distsbuf[whichKnn] > maxRectifiedDistance)
+          std::cerr << "    Pattern not detected: rectified distance " << distsbuf[whichKnn]
                     << " > " << maxRectifiedDistance << std::endl;
-#endif
         //notFound = true;
       }
     }
