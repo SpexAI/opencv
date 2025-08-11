@@ -48,16 +48,23 @@ namespace opencv_test { namespace {
 
 #define _L2_ERR
 
+#ifdef DEBUG
 //#define DEBUG_CHESSBOARD
+#endif
 
 #ifdef DEBUG_CHESSBOARD
 void show_points( const Mat& gray, const Mat& expected, const vector<Point2f>& actual, bool was_found )
 {
     Mat rgb( gray.size(), CV_8U);
     merge(vector<Mat>(3, gray), rgb);
+    Point2f offset = Point2f(8.0, 8.0);
+    Scalar textcolor = Scalar::all(0);
 
-    for(size_t i = 0; i < actual.size(); i++ )
+    for(size_t i = 0; i < actual.size(); i++ ) {
         circle( rgb, actual[i], 5, Scalar(0, 0, 200), 1, LINE_AA);
+        std::string text = cv::format("%u", (unsigned)i+1);
+        putText(rgb, text, actual[i] + offset, FONT_HERSHEY_SIMPLEX, 0.3, textcolor);
+    }
 
     if( !expected.empty() )
     {
@@ -67,7 +74,7 @@ void show_points( const Mat& gray, const Mat& expected, const vector<Point2f>& a
             circle(rgb, u_data[i], 4, Scalar(0, 240, 0), 1, LINE_AA);
     }
     putText(rgb, was_found ? "FOUND !!!" : "NOT FOUND", Point(5, 20), FONT_HERSHEY_PLAIN, 1, Scalar(0, 240, 0));
-    imshow( "test", rgb ); while ((uchar)waitKey(0) != 'q') {};
+    imshow( "test (press q to exit)", rgb ); while ((uchar)waitKey(0) != 'q') {};
 }
 #else
 #define show_points(...)
